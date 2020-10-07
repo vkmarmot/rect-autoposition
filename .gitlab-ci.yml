@@ -1,0 +1,25 @@
+image: node:10
+
+variables:
+    GIT_STRATEGY: "fetch"
+    GIT_SUBMODULE_STRATEGY: "normal"
+    GIT_CHECKOUT: "true"
+
+stages:
+    - build
+
+cache:
+    paths:
+        - node_modules/
+
+
+build:
+    artifacts:
+        paths:
+            - lib/
+    stage: build
+    script:
+        - git checkout -B "$CI_COMMIT_REF_NAME" "$CI_COMMIT_SHA"
+        - npm set registry http://npm.stc-spb.ru && npm install
+        - npm run test
+        - npm run build

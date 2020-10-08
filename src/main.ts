@@ -1,24 +1,43 @@
 import { Bounds, Point } from "tactic-geometry";
 
-
-const findIntersections = (list: Bounds[]) => {
-  const result: Map<Bounds, Bounds[]> = new Map<Bounds, Bounds[]>();
+const findIntersections = (
+  list: IBoundsData[],
+  fullList: IBoundsData[]
+): Map<string, Bounds[]> => {
+  const result: Map<string, Bounds[]> = new Map<string, Bounds[]>();
   for (const bound of list) {
     const intersectionList: Bounds[] = [];
-    for (const boundInner of list) {
-      if (boundInner !== bound) {
-        const intersection = bound.getIntersect(boundInner);
+    for (const boundInner of fullList) {
+      if (boundInner.id !== bound.id) {
+        const intersection = bound.bounds.getIntersect(boundInner.bounds);
         if (intersection) {
           intersectionList.push(intersection);
         }
       }
     }
     if (intersectionList.length) {
-      result.set(bound, intersectionList);
+      result.set(bound.id, intersectionList);
     }
   }
 
   return result;
+};
+
+const isSomeIntersection = (
+  id: string,
+  bounds: Bounds,
+  fullList: IBoundsData[]
+): boolean => {
+  for (const boundInner of fullList) {
+    if (boundInner.id !== id) {
+      const intersection = bounds.intersects(boundInner.bounds);
+      if (intersection) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 const vectorLengthSquared = (vector: Point): number => {
@@ -37,7 +56,7 @@ const normalizeVector = (vector: Point): Point => {
 export interface IBoundsData {
   id: string;
   // in which direction move is prohibited (south, west, north, east, all)
-  fix?: "s" | "w" | "n" | "e" | "all";
+  fix?: "s" | "w" | "n" | "e";
   bounds: Bounds;
 }
 
@@ -86,10 +105,10 @@ const repelDecayCoefficient = 1.0;
 
 const increaseVelocityByVector = (velocity: Point, diff: Point) => {
   if (vectorLength(diff) > 0) {
-    const scale = repelDecayCoefficient / vectorLengthSquared(diff);
-    const scaledDiff = normalizeVector(diff).multiplyBy(scale);
+    // const scale = repelDecayCoefficient / vectorLengthSquared(diff);
+    // const scaledDiff = normalizeVector(diff).multiplyBy(scale);
 
-    return velocity.add(scaledDiff);
+    return velocity.add(velocity);
   }
   return velocity;
 };
@@ -98,55 +117,184 @@ const moveBounds = (bounds: Bounds, offset: Point): Bounds => {
   return new Bounds(bounds.min.add(offset), bounds.max.add(offset));
 };
 
+const getMove = (bounds1: Bounds, bounds2: Bounds) => {
+  const intersection = bounds1.getIntersect(bounds2);
+  if (!intersection) {
+    return undefined;
+  }
+
+  const deltaCenter = bounds1.getCenter().subtract(bounds2.getCenter());
+  // const size = intersection.getSize();
+  // if (size.x > size.y) {
+  //     return new Point(0, size.y * Math.sign(deltaCenter.y));
+  // }
+  // return new Point(size.x * Math.sign(deltaCenter.x), 0);
+  return deltaCenter;
+};
+
+const STEP = 5;
+const STEP_ANGLE = 45;
+
+const freePositionBOunds = new Bounds([], []);
+
+const fillBounds = (bounds: Bounds, offset: Point) => {
+  freePositionBOunds.min.x = bounds.min.x + offset.x;
+  freePositionBOunds.min.y = bounds.min.y + offset.y;
+  freePositionBOunds.max.x = bounds.max.x + offset.x;
+  freePositionBOunds.max.y = bounds.max.y + offset.y;
+};
+
+type PROHIBITION = "w" | "e" | "s" | "n";
+
+const getProhibitionAngle = (
+  prohibition: PROHIBITION | undefined
+): [number, number] => {
+  switch (prohibition) {
+    case "w":
+      return [315, 585];
+    case "e":
+      return [135, 405];
+    case "n":
+      return [45, 315];
+    case "s":
+      return [135, 405];
+    default:
+      return [0, 360];
+  }
+};
+
+const findFreePosition = (
+  forRect: IBoundsData,
+  otherRects: IBoundsData[],
+  resolution = STEP
+): Point | undefined => {
+  let distance = resolution;
+  while (distance < 100) {
+    const prohibitionAngle = getProhibitionAngle(forRect.fix);
+    let [angle] = prohibitionAngle;
+    const [, max] = prohibitionAngle;
+    const point = new Point(0, distance);
+    while (angle < max) {
+      const offset = point.rotate(angle)._round();
+      angle += STEP_ANGLE;
+      fillBounds(forRect.bounds, offset);
+      if (!isSomeIntersection(forRect.id, freePositionBOunds, otherRects)) {
+        return offset;
+      }
+    }
+    distance += resolution;
+  }
+
+  return undefined;
+};
+
 function repositionLoop(
-  list: IBoundsData[],
+  stillIntersected: IBoundsData[],
+  notIntersected: IBoundsData[],
   resolution: number
 ): IBoundsData[] {
-  const count = list.length;
+  const count = stillIntersected.length;
+  const fullList = [...stillIntersected, ...notIntersected];
   for (let i = 0; i < count; i++) {
-    const room = list[i];
-    if (room.fix === "all") {
-      continue;
+    const room = stillIntersected[i];
+    // for (let j = 0; j < fullList.length; j++) {
+    //     if (i == j) {
+    //         continue;
+    //     }
+    //
+    //     const otherRoom = fullList[j];
+    // if (otherRoom.bounds.in)
+    // let move = getMove(room.bounds, otherRoom.bounds);
+    let move = findFreePosition(room, fullList, resolution);
+    while (move) {
+      // const move = getMove(room.bounds, otherRoom.bounds);
+      // if (!move) {
+      //     continue;
+      // }
+
+      // const diff = correctProhibition(move, room.fix);
+      // velocity = increaseVelocityByVector(velocity, diff);
+      room.bounds = moveBounds(room.bounds, move);
+      move = undefined;
+      // if (vectorLength(velocity) > 0) {
+      //     const offset = getOffsetByVelocity(velocity, resolution);
+      //     if (Math.abs(offset.x) >=1 || Math.abs(offset.y) >= 1) {
+      //         room.bounds = moveBounds(room.bounds, velocity);
+      //         move = getMove(room.bounds, otherRoom.bounds);
+      //     } else {
+      //         move = undefined;
+      //     }
+      // } else {
+      //     move = undefined;
+      // }
     }
-    const center = room.bounds.getCenter();
-    let velocity = new Point(0, 0);
+    // }
+  }
 
-    for (let j = 0; j < count; j++) {
-      if (i == j) {
-        continue;
-      }
+  return stillIntersected;
+}
 
-      const otherRoom = list[j];
-      const intersection = room.bounds.getIntersect(otherRoom.bounds);
+const getIntersectionsCount = (list: any[] | undefined): number =>
+  list ? list.length : 0;
 
-      if (!intersection) {
-        continue;
-      }
-
-      const otherCenter = otherRoom.bounds.getCenter();
-      const diff = correctProhibition(
-        center.subtract(otherCenter),
-        room.fix
-      );
-      velocity = increaseVelocityByVector(velocity, diff);
-    }
-
-    if (vectorLength(velocity) > 0) {
-      const offset = getOffsetByVelocity(velocity, resolution);
-      room.bounds = moveBounds(room.bounds, offset);
+const splitIntersections = (
+  list: IBoundsData[],
+  intersectionData: Map<string, Bounds[]>
+): [IBoundsData[], IBoundsData[]] => {
+  const notIntersectedList: IBoundsData[] = [];
+  const stillIntersected: IBoundsData[] = [];
+  for (const element of list) {
+    if (getIntersectionsCount(intersectionData.get(element.id))) {
+      stillIntersected.push(element);
+    } else {
+      notIntersectedList.push(element);
     }
   }
 
-  return list;
-}
+  return [notIntersectedList, stillIntersected];
+};
+
+const inverseFactory = (interections: Map<string, Bounds[]>) => (
+  bData1: IBoundsData,
+  bData2: IBoundsData
+) =>
+  getIntersectionsCount(interections.get(bData1.id)) -
+  getIntersectionsCount(interections.get(bData2.id));
+
+const factory = (interections: Map<string, Bounds[]>) => (
+  bData1: IBoundsData,
+  bData2: IBoundsData
+) =>
+  getIntersectionsCount(interections.get(bData2.id)) -
+  getIntersectionsCount(interections.get(bData1.id));
 
 export function reposition(
   list: IBoundsData[],
-  resolution = _resolution
+  resolution = _resolution,
+  inverse = false
 ): IBoundsData[] {
-  while (findIntersections(list.map(({ bounds }) => bounds)).size) {
-    repositionLoop(list, resolution);
+  const startTime = Date.now();
+  let iterList = list.slice();
+  const result: IBoundsData[] = [];
+  let intersectionsMap: Map<string, Bounds[]>;
+  const sorter = inverse ? inverseFactory : factory;
+  while (
+    (intersectionsMap = findIntersections(iterList, [...result, ...iterList]))
+      .size
+  ) {
+    const [iterNotInter, iterStillIntersect] = splitIntersections(
+      iterList,
+      intersectionsMap
+    );
+    // iterList = iterStillIntersect.sort(sorter(intersectionsMap));
+    iterList = iterStillIntersect;
+    // console.log(iterList.map((b) => getIntersectionsCount(intersectionsMap.get(b.id))));
+
+    result.push(...iterNotInter);
+    repositionLoop(iterList, result, resolution);
+    if (Date.now() - startTime > 300) {
+      return list;
+    }
   }
   return list;
 }
-

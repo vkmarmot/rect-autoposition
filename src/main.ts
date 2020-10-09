@@ -55,7 +55,7 @@ const normalizeVector = (vector: Point): Point => {
 
 export interface IBoundsData {
   id: string;
-  maxDistance: number;
+  maxDistance?: number;
   // in which direction move is prohibited (south, west, north, east, all)
   fix?: "s" | "w" | "n" | "e";
   bounds: Bounds;
@@ -170,7 +170,8 @@ const findFreePosition = (
   resolution = STEP
 ): Point | undefined => {
   let distance = resolution;
-  while (distance < forRect.maxDistance) {
+  const maxDistance = forRect.maxDistance || 100;
+  while (distance < maxDistance) {
     const prohibitionAngle = getProhibitionAngle(forRect.fix);
     let [angle] = prohibitionAngle;
     const [, max] = prohibitionAngle;

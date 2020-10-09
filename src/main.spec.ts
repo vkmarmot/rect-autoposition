@@ -23,8 +23,7 @@ describe("main", () => {
         { bounds: new Bounds(new Point(5, 5), new Point(15, 15)), id: "bar" },
         { bounds: new Bounds(new Point(12, 3), new Point(22, 13)), id: "baz" },
       ],
-      1,
-      true
+      1
     );
     expect(res).toEqual([
       { bounds: { max: { x: 10, y: 4 }, min: { x: 0, y: -6 } }, id: "foo" },

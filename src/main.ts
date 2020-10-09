@@ -55,6 +55,7 @@ const normalizeVector = (vector: Point): Point => {
 
 export interface IBoundsData {
   id: string;
+  maxDistance: number;
   // in which direction move is prohibited (south, west, north, east, all)
   fix?: "s" | "w" | "n" | "e";
   bounds: Bounds;
@@ -169,7 +170,7 @@ const findFreePosition = (
   resolution = STEP
 ): Point | undefined => {
   let distance = resolution;
-  while (distance < 100) {
+  while (distance < forRect.maxDistance) {
     const prohibitionAngle = getProhibitionAngle(forRect.fix);
     let [angle] = prohibitionAngle;
     const [, max] = prohibitionAngle;
@@ -254,30 +255,14 @@ const splitIntersections = (
   return [notIntersectedList, stillIntersected];
 };
 
-const inverseFactory = (interections: Map<string, Bounds[]>) => (
-  bData1: IBoundsData,
-  bData2: IBoundsData
-) =>
-  getIntersectionsCount(interections.get(bData1.id)) -
-  getIntersectionsCount(interections.get(bData2.id));
-
-const factory = (interections: Map<string, Bounds[]>) => (
-  bData1: IBoundsData,
-  bData2: IBoundsData
-) =>
-  getIntersectionsCount(interections.get(bData2.id)) -
-  getIntersectionsCount(interections.get(bData1.id));
-
 export function reposition(
   list: IBoundsData[],
-  resolution = _resolution,
-  inverse = false
+  resolution = _resolution
 ): IBoundsData[] {
   const startTime = Date.now();
   let iterList = list.slice();
   const result: IBoundsData[] = [];
   let intersectionsMap: Map<string, Bounds[]>;
-  const sorter = inverse ? inverseFactory : factory;
   while (
     (intersectionsMap = findIntersections(iterList, [...result, ...iterList]))
       .size
@@ -286,9 +271,7 @@ export function reposition(
       iterList,
       intersectionsMap
     );
-    // iterList = iterStillIntersect.sort(sorter(intersectionsMap));
     iterList = iterStillIntersect;
-    // console.log(iterList.map((b) => getIntersectionsCount(intersectionsMap.get(b.id))));
 
     result.push(...iterNotInter);
     repositionLoop(iterList, result, resolution);

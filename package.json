@@ -1,6 +1,6 @@
 {
     "name": "@tmc/rect-autoposition",
-    "version": "0.8.0",
+    "version": "0.8.1",
     "repository": {
         "type": "git",
         "url": ""
@@ -42,6 +42,9 @@
         "webpack-cli": "^3.3.11"
     },
     "dependencies": {
-        "tactic-geometry": "^1.0.3"
+        "tactic-geometry": "^1.0.4"
+    },
+    "peerDependencies": {
+        "tactic-geometry": ">= 1.0.4"
     }
 }

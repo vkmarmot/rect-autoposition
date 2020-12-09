@@ -5925,10 +5925,10 @@ symbol-tree@^3.2.4:
   resolved "http://npm.stc-spb.ru/symbol-tree/-/symbol-tree-3.2.4.tgz#430637d248ba77e078883951fb9aa0eed7c63fa2"
   integrity sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==
 
-tactic-geometry@^1.0.3:
-  version "1.0.3"
-  resolved "http://npm.stc-spb.ru/tactic-geometry/-/tactic-geometry-1.0.3.tgz#d0a74b8b11ba7ae4c919b844c0d55255e6a1f52a"
-  integrity sha512-M+pjNlUmR19i6qKdg9RkFVG2bnXTz83drr2/XpDjpD7i4DwRDO3NCr2oKonIdeEoef5KDhAU+vdli5LApX5DQQ==
+tactic-geometry@^1.0.4:
+  version "1.0.4"
+  resolved "http://npm.stc-spb.ru/tactic-geometry/-/tactic-geometry-1.0.4.tgz#6a8f75273628fe387ad50df1e2c755cd1a650411"
+  integrity sha512-h7Vx4d9rmAmq9orRmO3YBMfl2yYp+iulM61ikXjILaxJhLODLLbOz9AQKUyiYCqcncxygXD9jPArz3jD4MtihQ==
 
 tapable@^1.0.0, tapable@^1.1.3:
   version "1.1.3"

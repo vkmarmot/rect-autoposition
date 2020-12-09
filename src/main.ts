@@ -6,6 +6,9 @@ const findIntersections = (
 ): Map<string, Bounds[]> => {
   const result: Map<string, Bounds[]> = new Map<string, Bounds[]>();
   for (const bound of list) {
+    if (!bound.maxDistance) {
+      continue;
+    }
     const intersectionList: Bounds[] = [];
     for (const boundInner of fullList) {
       if (boundInner.id !== bound.id) {
@@ -170,7 +173,7 @@ const findFreePosition = (
   resolution = STEP
 ): Point | undefined => {
   let distance = resolution;
-  const maxDistance = forRect.maxDistance || 100;
+  const { maxDistance = 100 } = forRect;
   while (distance < maxDistance) {
     const prohibitionAngle = getProhibitionAngle(forRect.fix);
     let [angle] = prohibitionAngle;
@@ -199,6 +202,9 @@ function repositionLoop(
   const fullList = [...stillIntersected, ...notIntersected];
   for (let i = 0; i < count; i++) {
     const room = stillIntersected[i];
+    if (!room.maxDistance) {
+      continue;
+    }
     // for (let j = 0; j < fullList.length; j++) {
     //     if (i == j) {
     //         continue;
@@ -246,7 +252,7 @@ const splitIntersections = (
   const notIntersectedList: IBoundsData[] = [];
   const stillIntersected: IBoundsData[] = [];
   for (const element of list) {
-    if (getIntersectionsCount(intersectionData.get(element.id))) {
+    if (element.maxDistance && getIntersectionsCount(intersectionData.get(element.id))) {
       stillIntersected.push(element);
     } else {
       notIntersectedList.push(element);
